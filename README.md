@@ -1,17 +1,83 @@
-[![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com) [![Build Status](https://travis-ci.org/horike37/serverless-step-functions.svg?branch=master)](https://travis-ci.org/horike37/serverless-step-functions) [![npm version](https://badge.fury.io/js/serverless-step-functions.svg)](https://badge.fury.io/js/serverless-step-functions) [![Coverage Status](https://coveralls.io/repos/github/horike37/serverless-step-functions/badge.svg?branch=master)](https://coveralls.io/github/horike37/serverless-step-functions?branch=master) [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE) [![serverless-step-functions Dev Token](https://badge.devtoken.rocks/serverless-step-functions)](https://devtoken.rocks/package/serverless-step-functions)
 # Serverless Step Functions
-This is the Serverless Framework plugin for AWS Step Functions.
+This fork adds the ability to use files variables and JSON config files to the AWS Step Functions plugin for Serverless Framework.
+
+**This fork allows to do this:**
+
+```yml
+service: example
+
+custom:
+  accountId: xxxxxxxx
+  serviceStage: ${self:service}-${self:provider.stage}
+  iamBase: arn:aws:iam::${self:custom.accountId}:role/${self:custom.serviceStage}
+  snsBase: arn:aws:sns:${self:provider.region}:${self:custom.accountId}
+  lambdaBase: arn:aws:lambda:${self:provider.region}:${self:custom.accountId}:function:${self:custom.serviceStage}
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: dev
+  region: us-east-1
+  # and more...
+
+functions:
+  - ${file(functions/api/serverless.yml)}
+  - ${file(functions/utils/serverless.yml)}
+  - ${file(functions/services/serverless.yml)}
+
+stepFunctions:
+  stateMachines:
+    - ${file(stepFunctions/stateMachines/createWorkflow.yml)}
+    - ${file(stepFunctions/stateMachines/deleteWorkflow.yml)}
+    - ${file(stepFunctions/stateMachines/updateWorkflow.yml)}
+    - ${file(stepFunctions/stateMachines/startWorkflow.yml)}
+    - ${file(stepFunctions/stateMachines/stopWorkflow.yml)}
+
+plugins:
+  - '@fanhero/serverless-step-functions'
+  - serverless-pseudo-parameters
+```
+
+**And, as example, the `stepFunctions/stateMachines/startWorkflow.yml` could look like this:**
+
+```yml
+StartWorkflow:
+  name: ${self:custom.serviceStage}-start
+  role: ${self:custom.iamBase}-StepFunctionsServiceRole
+  definition:
+    Comment: "Step Function to start flow"
+    StartAt: dbGet
+    States:
+      dbGet:
+        Type: Task
+        Resource: ${self:custom.lambdaBase}-dbGet
+        Next: serviceStart
+      serviceStart:
+        Type: Task
+        Resource: ${self:custom.lambdaBase}-serviceStart
+        Next: dbUpdate
+      dbUpdate:
+        Type: Task
+        Resource: ${self:custom.lambdaBase}-dbUpdate
+        Next: sendNotification
+      sendNotification:
+        Type: Task
+        Resource: ${self:custom.lambdaBase}-sendNotification
+        End: true
+
+# (more stateMachines can be added here)
+```
 
 ## Install
 Run `npm install` in your Serverless project.
 ```
-$ npm install --save-dev serverless-step-functions
+$ npm install --save-dev @fanhero/serverless-step-functions
 ```
 
 Add the plugin to your serverless.yml file
 ```yml
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
 ```
 
 ## Setup
@@ -60,7 +126,7 @@ stepFunctions:
     - yourTask
 
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
   - serverless-pseudo-parameters
 ```
 
@@ -83,7 +149,7 @@ stepFunctions:
         <your definition>
 
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
 ```
 
 ### Adding a custom logical id for a stateMachine
@@ -105,7 +171,7 @@ stepFunctions:
         <your definition>
 
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
 ```
 
 You can then `Ref: SendMessageStateMachine` in various parts of CloudFormation or serverless.yml
@@ -329,11 +395,11 @@ stepFunctions:
       events:
         - http:
             path: /users
-            ...     
+            ...
             authorizer:
               # Provide both type and authorizerId
               type: COGNITO_USER_POOLS # TOKEN, CUSTOM or COGNITO_USER_POOLS, same as AWS Cloudformation documentation
-              authorizerId: 
+              authorizerId:
                 Ref: ApiGatewayAuthorizer  # or hard-code Authorizer ID
 ```
 
@@ -416,7 +482,7 @@ functions:
 
 
     plugins:
-      - serverless-step-functions
+      - '@fanhero/serverless-step-functions'
       - serverless-pseudo-parameters
 ```
 
@@ -581,7 +647,7 @@ stepFunctions:
                 state:
                   - pending
       definition:
-        ...   
+        ...
 ```
 
 ## Specifying a Name
@@ -654,7 +720,7 @@ resources:
   Resources:
     StateMachineRole:
       Type: AWS::IAM::Role
-      Properties: 
+      Properties:
         ...
 ```
 
@@ -687,7 +753,7 @@ resources:
         Ref: MyStateMachine
 
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
 ```
 ## Sample statemachines setting in serverless.yml
 ### Wait State
@@ -728,7 +794,7 @@ stepFunctions:
             Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-hello
             End: true
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
   - serverless-pseudo-parameters
 ```
 
@@ -766,7 +832,7 @@ stepFunctions:
               BackoffRate: 2
             End: true
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
   - serverless-pseudo-parameters
 ```
 
@@ -807,7 +873,7 @@ stepFunctions:
             Type: Pass
             End: true
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
   - serverless-pseudo-parameters
 ```
 
@@ -852,7 +918,7 @@ stepFunctions:
             Result: "This is a fallback from a reserved error code"
             End: true
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
   - serverless-pseudo-parameters
 ```
 
@@ -906,6 +972,6 @@ stepFunctions:
             Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-hello4
             End: true
 plugins:
-  - serverless-step-functions
+  - '@fanhero/serverless-step-functions'
   - serverless-pseudo-parameters
 ```
