@@ -1,7 +1,8 @@
 {
   "name": "@fanhero/serverless-step-functions",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "This fork adds the ability to use files variables and JSON config files to the AWS Step Functions plugin for Serverless Framework",
+  "private": false,
   "main": "lib/index.js",
   "scripts": {
     "test": "istanbul cover -x '**/*.test.js' node_modules/mocha/bin/_mocha '!(node_modules)/**/*.test.js' -- -R spec --recursive",

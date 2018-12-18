@@ -33,6 +33,7 @@ node_modules
 # OS stuff
 .DS_Store
 .tmp
+.npmrc
 
 # Serverless stuff
 admin.env
